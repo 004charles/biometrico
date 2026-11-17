@@ -1,0 +1,16 @@
+{
+  "name": "Totem Ponto Biométrico",
+  "short_name": "Ponto Totem",
+  "start_url": "/totem",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "/static/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

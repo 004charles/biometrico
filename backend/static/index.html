@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Administrativa | Ponto Biométrico</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Header Superior (Branco Puro) -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="h-11 w-11 rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm">
+        <i class="fa-solid fa-fingerprint text-white text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">Dashboard Administrativa de Ponto</h1>
+        <p class="text-xs text-slate-500 font-medium">Controle de Presenças, Faltas e Horários da Empresa</p>
+      </div>
+    </div>
+
+    <!-- Ações do Gestor -->
+    <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+      <div class="hidden md:flex items-center space-x-2 bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-200">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="live-clock" class="text-sm font-mono font-semibold text-slate-700">--:--:--</span>
+      </div>
+
+      <!-- Baixar APK Mobile -->
+      <a href="/app.apk" download class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+        <i class="fa-brands fa-android"></i>
+        <span>Baixar App (APK)</span>
+      </a>
+
+      <!-- Exportar Relatório CSV/Excel -->
+      <a href="/api/attendance/export/csv" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+        <i class="fa-solid fa-file-excel"></i>
+        <span>Exportar Relatório</span>
+      </a>
+
+      <button onclick="refreshData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 p-2 rounded-lg text-sm transition" title="Atualizar dados">
+        <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Abas de Navegação -->
+  <div class="bg-white border-b border-slate-200 px-6">
+    <div class="flex space-x-8">
+      <button onclick="switchTab('tab-live')" id="btn-tab-live" class="tab-btn active border-b-2 border-emerald-600 py-3.5 text-sm font-bold text-emerald-600 flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-check"></i>
+        <span>Presenças do Dia</span>
+      </button>
+      <button onclick="switchTab('tab-employees')" id="btn-tab-employees" class="tab-btn border-b-2 border-transparent py-3.5 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-users"></i>
+        <span>Colaboradores Cadastrados</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6 bg-slate-50">
+
+    <!-- 4 CARTÕES KPI PRINCIPAIS SOLICITADOS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- 1. PRESENTES HOJE -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Presentes Hoje</p>
+          <h3 id="stat-present" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Colaboradores no local</p>
+        </div>
+        <div class="h-13 w-13 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-2xl p-3">
+          <i class="fa-solid fa-user-check"></i>
+        </div>
+      </div>
+
+      <!-- 2. FALTAS HOJE -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Faltaram Hoje</p>
+          <h3 id="stat-absent" class="text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Sem registro de entrada</p>
+        </div>
+        <div class="h-13 w-13 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 text-2xl p-3">
+          <i class="fa-solid fa-user-xmark"></i>
+        </div>
+      </div>
+
+      <!-- 3. CHEGARAM ATRASADOS -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Chegaram Atrasados</p>
+          <h3 id="stat-late" class="text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Após horário previsto</p>
+        </div>
+        <div class="h-13 w-13 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-2xl p-3">
+          <i class="fa-solid fa-user-clock"></i>
+        </div>
+      </div>
+
+      <!-- 4. TOTAL MINUTOS DE ATRASO -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Minutos de Atraso</p>
+          <h3 id="stat-delay-minutes" class="text-3xl font-extrabold text-indigo-600 mt-1">0 min</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Acumulado no dia</p>
+        </div>
+        <div class="h-13 w-13 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-2xl p-3">
+          <i class="fa-solid fa-stopwatch"></i>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ABA 1: TABELA DE PRESENÇAS DO DIA -->
+    <section id="tab-live" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Registros de Ponto em Tempo Real</h2>
+          <p class="text-xs text-slate-500">Histórico de entradas e saídas conectado ao Humancore HRMS.</p>
+        </div>
+        <div class="flex items-center space-x-2.5">
+          <button onclick="syncAttendanceToHumancore()" id="btn-sync-attendance" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-cloud-arrow-up" id="icon-sync-att"></i>
+            <span>Enviar ao Humancore</span>
+          </button>
+          <button onclick="closeDayHumancore()" id="btn-close-day" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+            <i class="fa-solid fa-moon"></i>
+            <span>Fechar Dia (Lançar Faltas)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3.5 px-5">Colaborador</th>
+                <th class="py-3.5 px-5">Horário da Batida</th>
+                <th class="py-3.5 px-5">Tipo</th>
+                <th class="py-3.5 px-5">Pontualidade</th>
+                <th class="py-3.5 px-5">Atraso</th>
+                <th class="py-3.5 px-5">Dispositivo</th>
+                <th class="py-3.5 px-5">Status</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <tr>
+                <td colspan="7" class="py-12 text-center text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-600"></i>
+                  <p>Carregando presenças...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 2: COLABORADORES CADASTRADOS -->
+    <section id="tab-employees" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Quadro de Colaboradores</h2>
+          <p class="text-xs text-slate-500">Funcionários habilitados para bater ponto no aplicativo.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="syncHumancore()" id="btn-sync-humancore" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-sm transition">
+            <i class="fa-solid fa-arrows-rotate" id="humancore-icon"></i>
+            <span>Sincronizar com Humancore (SCKJ)</span>
+          </button>
+          <button onclick="openEmployeeModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-sm transition">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Cadastrar Manual</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="employees-cards-container">
+        <!-- Preenchido via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Cadastrar Funcionário -->
+  <div id="modal-employee" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-user-plus text-emerald-600"></i>
+          <span>Novo Colaborador</span>
+        </h3>
+        <button onclick="closeEmployeeModal()" class="text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="create-employee-form" onsubmit="submitCreateEmployee(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Código / Matrícula (Ex: 101, 102)</label>
+          <input type="text" id="emp-code" required placeholder="Ex: 101" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome Completo</label>
+          <input type="text" id="emp-name" required placeholder="Ex: João Baptista" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Departamento</label>
+            <input type="text" id="emp-dept" required placeholder="Ex: Operações" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Cargo</label>
+            <input type="text" id="emp-role" required placeholder="Ex: Técnico" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Horário de Entrada</label>
+            <input type="text" id="emp-start-time" value="08:00" placeholder="08:00" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Tolerância (minutos)</label>
+            <input type="number" id="emp-tolerance" value="10" placeholder="10" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 focus:bg-white">
+          </div>
+        </div>
+
+        <div class="pt-3 flex justify-end space-x-3 border-t border-slate-200">
+          <button type="button" onclick="closeEmployeeModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800">Cancelar</button>
+          <button type="submit" id="btn-submit-employee" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+            Salvar Colaborador
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
