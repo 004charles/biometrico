@@ -25,6 +25,18 @@ for _d in (EMP_PHOTOS_DIR, PUNCH_PHOTOS_DIR):
     os.makedirs(_d, exist_ok=True)
 
 
+# Tamanho máximo de uma foto enviada (cadastro/picagem). Evita sobrecarregar o servidor.
+MAX_PHOTO_BYTES = 8 * 1024 * 1024  # 8 MB
+
+
+async def _read_photo(photo: UploadFile):
+    """Lê a foto com um limite de tamanho. Devolve os bytes, ou None se for grande demais."""
+    data = await photo.read(MAX_PHOTO_BYTES + 1)
+    if len(data) > MAX_PHOTO_BYTES:
+        return None
+    return data
+
+
 def _save_photo(folder: str, image_bytes: bytes) -> str:
     """Guarda a foto com um nome aleatório e impossível de adivinhar (não inclui o código
     do colaborador, para a biometria não ficar identificável pelo nome do ficheiro)."""
@@ -493,7 +505,9 @@ async def enroll_face(emp_id: int, photo: UploadFile = File(...), db = Depends(g
     if not emp:
         raise HTTPException(status_code=404, detail="Colaborador não encontrado.")
 
-    data = await photo.read()
+    data = await _read_photo(photo)
+    if data is None:
+        return JSONResponse(status_code=413, content={"success": False, "message": "Foto demasiado grande (máx. 8 MB)."})
     feature, err = await asyncio.to_thread(face_service.features_from_bytes, data)
     if err:
         return JSONResponse(status_code=422, content={"success": False, "message": err})
@@ -536,7 +550,9 @@ async def punch_face(
             "success": False, "reason": "no_face",
             "message": f"{employee['name']} ainda não tem rosto cadastrado. Procure o RH."})
 
-    data = await photo.read()
+    data = await _read_photo(photo)
+    if data is None:
+        return JSONResponse(status_code=413, content={"success": False, "message": "Foto demasiado grande (máx. 8 MB)."})
     ok, score, err = await asyncio.to_thread(face_service.verify, data, employee["face_features"])
     if not ok:
         return JSONResponse(status_code=200, content={
