@@ -1,0 +1,11 @@
+# Caches Python
+__pycache__/
+*.pyc
+# Base de dados e dados de execução
+*.db
+backend/uploads/
+# Biometria e ficheiros grandes de build não versionados
+*.log
+*.bak
+# Mobile
+mobile/.expo/

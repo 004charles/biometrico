@@ -7,18 +7,40 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchEmployees();
 });
 
+// Hora oficial: sincronizada com o servidor (não depende do relógio do tablet)
+let serverOffsetMs = 0;
+let serverTimeZone = "Africa/Luanda";
+
+async function syncServerTime() {
+  try {
+    const t0 = Date.now();
+    const res = await fetch("/api/time", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const t1 = Date.now();
+    serverOffsetMs = data.epoch_ms - Math.round((t0 + t1) / 2);
+    serverTimeZone = data.timezone || serverTimeZone;
+  } catch (e) {
+    console.warn("Não foi possível sincronizar a hora com o servidor:", e);
+  }
+}
+
 // Relógio do Terminal
 function initClock() {
   const clockEl = document.getElementById("totem-clock");
   const dateEl = document.getElementById("totem-date");
 
+  syncServerTime();
+  setInterval(syncServerTime, 5 * 60 * 1000);
+
   function update() {
-    const now = new Date();
+    const now = new Date(Date.now() + serverOffsetMs);
     if (clockEl) {
-      clockEl.innerText = now.toLocaleTimeString("pt-BR", { hour12: false });
+      clockEl.innerText = now.toLocaleTimeString("pt-PT", { hour12: false, timeZone: serverTimeZone });
     }
     if (dateEl) {
-      dateEl.innerText = now.toLocaleDateString("pt-BR", {
+      dateEl.innerText = now.toLocaleDateString("pt-PT", {
+        timeZone: serverTimeZone,
         weekday: "long",
         day: "2-digit",
         month: "long",

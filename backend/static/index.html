@@ -37,11 +37,11 @@
         <span>Baixar App (APK)</span>
       </a>
 
-      <!-- Exportar Relatório CSV/Excel -->
-      <a href="/api/attendance/export/csv" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
-        <i class="fa-solid fa-file-excel"></i>
+      <!-- Exportar Relatório (PDF / Excel) -->
+      <button onclick="openExportModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-sm">
+        <i class="fa-solid fa-file-export"></i>
         <span>Exportar Relatório</span>
-      </a>
+      </button>
 
       <button onclick="refreshData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 p-2 rounded-lg text-sm transition" title="Atualizar dados">
         <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
@@ -54,7 +54,7 @@
     <div class="flex space-x-8">
       <button onclick="switchTab('tab-live')" id="btn-tab-live" class="tab-btn active border-b-2 border-emerald-600 py-3.5 text-sm font-bold text-emerald-600 flex items-center gap-2">
         <i class="fa-solid fa-clipboard-check"></i>
-        <span>Presenças do Dia</span>
+        <span>Registos de Ponto</span>
       </button>
       <button onclick="switchTab('tab-employees')" id="btn-tab-employees" class="tab-btn border-b-2 border-transparent py-3.5 text-sm font-medium text-slate-500 hover:text-slate-800 flex items-center gap-2">
         <i class="fa-solid fa-users"></i>
@@ -66,15 +66,16 @@
   <!-- Conteúdo Principal -->
   <main class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6 bg-slate-50">
 
-    <!-- 4 CARTÕES KPI PRINCIPAIS SOLICITADOS -->
+    <!-- 4 CARTÕES KPI (referem-se ao dia selecionado) -->
+    <p class="text-xs font-semibold text-slate-500 -mb-3">Indicadores de <span id="kpi-day" class="text-slate-800 font-bold">hoje</span></p>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- 1. PRESENTES HOJE -->
       <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Presentes Hoje</p>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Presentes</p>
           <h3 id="stat-present" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
-          <p class="text-[11px] text-slate-400 mt-1">Colaboradores no local</p>
+          <p class="text-[11px] text-slate-400 mt-1">Registaram entrada</p>
         </div>
         <div class="h-13 w-13 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-2xl p-3">
           <i class="fa-solid fa-user-check"></i>
@@ -84,7 +85,7 @@
       <!-- 2. FALTAS HOJE -->
       <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Faltaram Hoje</p>
+          <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Sem Registo</p>
           <h3 id="stat-absent" class="text-3xl font-extrabold text-rose-600 mt-1">0</h3>
           <p class="text-[11px] text-slate-400 mt-1">Sem registro de entrada</p>
         </div>
@@ -110,7 +111,7 @@
         <div>
           <p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Minutos de Atraso</p>
           <h3 id="stat-delay-minutes" class="text-3xl font-extrabold text-indigo-600 mt-1">0 min</h3>
-          <p class="text-[11px] text-slate-400 mt-1">Acumulado no dia</p>
+          <p class="text-[11px] text-slate-400 mt-1">Acumulado do dia</p>
         </div>
         <div class="h-13 w-13 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-2xl p-3">
           <i class="fa-solid fa-stopwatch"></i>
@@ -123,14 +124,13 @@
     <section id="tab-live" class="space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-base font-bold text-slate-900">Registros de Ponto em Tempo Real</h2>
-          <p class="text-xs text-slate-500">Histórico de entradas e saídas conectado ao Humancore HRMS.</p>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span id="live-title">Registos de hoje</span>
+            <span id="live-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>AO VIVO</span>
+          </h2>
+          <p class="text-xs text-slate-500" id="live-subtitle">Entradas e saídas de hoje, atualizadas automaticamente.</p>
         </div>
         <div class="flex items-center space-x-2.5">
-          <button onclick="syncAttendanceToHumancore()" id="btn-sync-attendance" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
-            <i class="fa-solid fa-cloud-arrow-up" id="icon-sync-att"></i>
-            <span>Enviar ao Humancore</span>
-          </button>
           <button onclick="closeDayHumancore()" id="btn-close-day" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
             <i class="fa-solid fa-moon"></i>
             <span>Fechar Dia (Lançar Faltas)</span>
@@ -138,23 +138,41 @@
         </div>
       </div>
 
+      <!-- Filtros: dia, pesquisa e modo de visualização -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex flex-col lg:flex-row lg:items-center gap-3">
+        <div class="flex items-center gap-1.5">
+          <button onclick="shiftDay(-1)" class="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" title="Dia anterior" aria-label="Dia anterior">
+            <i class="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          <input type="date" id="filter-date" onchange="setSelectedDate(this.value)" class="h-9 border border-slate-200 rounded-lg px-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-emerald-600">
+          <button onclick="shiftDay(1)" id="btn-next-day" class="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" title="Dia seguinte" aria-label="Dia seguinte">
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+          <button onclick="goToday()" id="btn-today" class="h-9 px-3 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50">Hoje</button>
+        </div>
+
+        <div class="relative flex-1 min-w-0">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="search" id="filter-search" oninput="renderLiveView()" placeholder="Pesquisar colaborador, código ou departamento" class="w-full h-9 border border-slate-200 rounded-lg pl-8 pr-3 text-sm focus:outline-none focus:border-emerald-600">
+        </div>
+
+        <div class="flex bg-slate-100 rounded-lg p-1 text-xs font-bold" role="tablist">
+          <button onclick="setView('punches')" data-view="punches" class="view-btn px-3 py-1.5 rounded-md">Batidas <span id="count-punches" class="text-slate-400 font-semibold"></span></button>
+          <button onclick="setView('summary')" data-view="summary" class="view-btn px-3 py-1.5 rounded-md">Resumo do dia <span id="count-summary" class="text-slate-400 font-semibold"></span></button>
+          <button onclick="setView('absent')" data-view="absent" class="view-btn px-3 py-1.5 rounded-md">Sem registo <span id="count-absent" class="text-slate-400 font-semibold"></span></button>
+        </div>
+      </div>
+
+      <!-- Aviso: batidas que ainda não chegaram ao Humancore -->
+      <div id="sync-banner" class="hidden rounded-2xl border px-4 py-3 text-sm flex items-start gap-3"></div>
+
       <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-sm">
-            <thead class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
-              <tr>
-                <th class="py-3.5 px-5">Colaborador</th>
-                <th class="py-3.5 px-5">Horário da Batida</th>
-                <th class="py-3.5 px-5">Tipo</th>
-                <th class="py-3.5 px-5">Pontualidade</th>
-                <th class="py-3.5 px-5">Atraso</th>
-                <th class="py-3.5 px-5">Dispositivo</th>
-                <th class="py-3.5 px-5">Status</th>
-              </tr>
-            </thead>
+            <thead id="live-thead" class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200"></thead>
             <tbody id="attendance-tbody" class="divide-y divide-slate-100 text-slate-700">
               <tr>
-                <td colspan="7" class="py-12 text-center text-slate-400">
+                <td colspan="8" class="py-12 text-center text-slate-400">
                   <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-600"></i>
                   <p>Carregando presenças...</p>
                 </td>
@@ -241,6 +259,57 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Exportar Relatório -->
+  <div id="modal-export" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-file-export text-emerald-600"></i>
+          <span>Exportar Relatório</span>
+        </h3>
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-slate-700" aria-label="Fechar">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <p class="text-xs font-bold text-slate-700 uppercase tracking-wider">Período</p>
+        <label class="flex items-center gap-3 border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/50">
+          <input type="radio" name="export-period" value="day" checked onchange="updateExportForm()" class="accent-emerald-600">
+          <span class="text-sm font-semibold text-slate-800 flex-1">Um dia</span>
+          <input type="date" id="export-day" onchange="updateExportForm()" class="border border-slate-200 rounded-lg px-2 py-1 text-sm">
+        </label>
+        <label class="flex items-center gap-3 border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/50">
+          <input type="radio" name="export-period" value="month" onchange="updateExportForm()" class="accent-emerald-600">
+          <span class="text-sm font-semibold text-slate-800 flex-1">Mês inteiro <span class="block text-[11px] font-normal text-slate-500">Do dia 1 ao último dia do mês</span></span>
+          <input type="month" id="export-month" onchange="updateExportForm()" class="border border-slate-200 rounded-lg px-2 py-1 text-sm">
+        </label>
+        <label class="block border border-slate-200 rounded-xl px-3 py-2.5 cursor-pointer has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50/50">
+          <span class="flex items-center gap-3">
+            <input type="radio" name="export-period" value="range" onchange="updateExportForm()" class="accent-emerald-600">
+            <span class="text-sm font-semibold text-slate-800">Intervalo de datas</span>
+          </span>
+          <span class="grid grid-cols-2 gap-2 mt-2 pl-7">
+            <span><span class="block text-[11px] text-slate-500 mb-0.5">De</span><input type="date" id="export-from" onchange="updateExportForm()" class="w-full border border-slate-200 rounded-lg px-2 py-1 text-sm"></span>
+            <span><span class="block text-[11px] text-slate-500 mb-0.5">Até</span><input type="date" id="export-to" onchange="updateExportForm()" class="w-full border border-slate-200 rounded-lg px-2 py-1 text-sm"></span>
+          </span>
+        </label>
+      </div>
+
+      <p id="export-error" class="hidden text-xs font-semibold text-rose-600"></p>
+
+      <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200">
+        <button onclick="doExport('pdf')" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+          <i class="fa-solid fa-file-pdf"></i> PDF
+        </button>
+        <button onclick="doExport('csv')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+          <i class="fa-solid fa-file-excel"></i> Excel (CSV)
+        </button>
+      </div>
+      <p class="text-[11px] text-slate-500 -mt-1">O PDF traz o resumo por colaborador (entrada, saída, horas trabalhadas e atrasos). O Excel traz todas as batidas, uma por linha.</p>
     </div>
   </div>
 
